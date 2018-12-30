@@ -3,7 +3,6 @@ package com.fintech.pricegenerator.pricedata;
 import org.springframework.jms.UncategorizedJmsException;
 import org.springframework.jms.core.JmsTemplate;
 
-import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -21,7 +20,6 @@ public class PriceData implements Callable {
     private String stockSymbol;
     private JmsTemplate jmsTemplate;
     private Queue queueName;
-    private static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
 
     private static Logger log  = Logger.getLogger(PriceData.class);
 
@@ -37,20 +35,25 @@ public class PriceData implements Callable {
         while(true){
             for (String priceData : this.prices){
                 String[] data = priceData.split("\"");
-                String timestamp = data[1];
-                String open = data[3];
-                String high = data [5];
-                String low = data [7];
-                String close = data [9];
-                String volume = data [11];
+                String stockName = data[1];
+                String stockSymbol = data[3];
+                String timestamp = data[5];
+                String priceOpen = data[7];
+                String priceHigh = data [9];
+                String priceLow = data [11];
+                String priceClose = data [13];
+                String volume = data [15];
 
                 // Spring will convert a HashMap into a MapMessage using the default MessageConverter.
                 HashMap<String, String> priceMessage = new HashMap<>();
+
+                priceMessage.put("stockName", stockName);
+                priceMessage.put("stockSymbol", stockSymbol);
                 priceMessage.put("timestamp", timestamp);
-                priceMessage.put("open", open);
-                priceMessage.put("high", high);
-                priceMessage.put("low", low);
-                priceMessage.put("close", close);
+                priceMessage.put("priceOpen", priceOpen);
+                priceMessage.put("priceHigh", priceHigh);
+                priceMessage.put("priceLow", priceLow);
+                priceMessage.put("priceClose", priceClose);
                 priceMessage.put("volume", volume);
 
                 sendToQueue(priceMessage);
@@ -73,8 +76,6 @@ public class PriceData implements Callable {
         while(messageNotSent) {
             // broadcast this report
             try {
-//                System.out.println("Posting a price-message to the queue.");
-//                System.out.println(priceMessage);
                 jmsTemplate.convertAndSend(queueName, priceMessage);
                 messageNotSent = false;
             }catch (UncategorizedJmsException e) {
